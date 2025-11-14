@@ -153,7 +153,7 @@ int readnum() {
     FILE* file = fopen("tired.img", "rb");
 
     fseek(file, 0, SEEK_SET);
-   ;
+
     fread(tired, 1, sizeof(Tired), file);
 
     fclose(file);
@@ -300,7 +300,7 @@ int writeRecycleBin(char* fileName) {
 
                     printf("%s\n", data);
 
-                    fseek(file, tired->en->offset - 2000, 0);
+                    fseek(file, tired->en->offset - 3000, 0);
 
                     fwrite(data2Save, strlen(data2Save), 1, file);
                     // printf("hello\n");
@@ -343,6 +343,72 @@ int writeRecycleBin(char* fileName) {
 
         Sleep(300);
     }
+}
+
+int encryptFile(char* fileName, BYTE encryptWith) {
+    FILE* file = fopen("tired.img", "rb+");
+
+    fseek(file, 5000, SEEK_SET);
+
+    tired = malloc(sizeof(Tired));
+    tired->en = malloc(10 * sizeof(entry));
+
+    int dothis = 0;
+    char* data2Save = NULL;
+
+    for (int i=0; i < 10; i++) {
+
+        fseek(file, i * sizeof(entry), SEEK_SET);
+        fread(tired->en, 1, sizeof(entry), file);
+
+        if (strcmp(tired->en->name, fileName) == 0) {
+            fseek(file, tired->en->offset, SEEK_SET);
+            int size = tired->en->nextEntry - tired->en->offset;
+
+            BYTE* data = malloc(size);
+            fread(data, 1, size, file);
+
+            for (int i=0; i < size; i++) {
+                data[i] ^= encryptWith;
+            }
+
+            if (data) {
+                fseek(file, tired->en->offset, SEEK_SET);
+                fwrite(data, size, 1, file);
+                puts("Encrypted data\n");
+            }
+        }
+
+    }
+}
+
+int rename(char* fileName, char* newName) {
+        
+    FILE* file = fopen("tired.img", "rb+");
+
+    fseek(file, 5000, SEEK_SET);
+
+    tired = malloc(sizeof(Tired));
+    tired->en = malloc(10 * sizeof(entry));
+
+    int dothis = 0;
+    char* data2Save = NULL;
+
+    for (int i=0; i < 10; i++) {
+
+        fseek(file, i * sizeof(entry), SEEK_SET);
+        fread(tired->en, 1, sizeof(entry), file);
+
+        if (strcmp(tired->en->name, fileName) == 0) {
+            strcpy(tired->en->name, newName);
+            fseek(file, i * sizeof(entry) + offsetof(entry, name), SEEK_SET);
+            fwrite(tired->en->name, 1, strlen(tired->en->name), file);
+
+        }
+}
+
+fclose(file);
+return 0;
 }
 
 
@@ -409,6 +475,17 @@ int main(int argc, char* argv[]) {
       if (strcmp(argv[1], "-delete") == 0) {
         delete(argv[2]);
         writeRecycleBin(argv[2]);
+      }
+
+      if (strcmp(argv[1], "-encrypt") == 0) {
+        loadStruct();
+        encryptFile(argv[2], (BYTE)argv[2][1]);
+      }
+
+      if (strcmp(argv[1], "-rename") == 0) {
+        loadStruct();
+        rename(argv[2], argv[3]);
+        puts("renamed");
       }
 
     return 0;
